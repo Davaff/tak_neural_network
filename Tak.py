@@ -1,0 +1,2 @@
+class Tak:
+    pass
