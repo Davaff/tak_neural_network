@@ -47,6 +47,10 @@ class TakNN:
         policy_flat = Flatten()(policy_2)
         self.pi = Dense(Tak.getActionSize(), activation="softmax", name="pi")(policy_flat)
 
+        device_name = os.environ["COLAB_TPU_ADDR"]
+        TPU_ADDRESS = "grpc://" + device_name
+        print("Found TPU at: {}".format(TPU_ADDRESS))
+
         self.model = Model(inputs=self.input_layer, outputs=[self.v, self.pi])
         self.model.compile(loss=["categorical_crossentropy", "mean_squared_error"], optimizer=Adam(0.001))
     def resNetBlock(self, input_layer):
