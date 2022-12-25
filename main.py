@@ -1,13 +1,13 @@
+from Tak import Tak, MoveAction, Direction
 from TakNN import TakNN
 import numpy as np
 
+from Trainer import Trainer
+
 # Credit to https://github.com/suragnair/alpha-zero-general
-
+import sys
+sys.setrecursionlimit(10000)
 nn = TakNN()
+c = Trainer(nn)
+c.train()
 
-test_board = np.random.rand(5, 5, 43)
-test_board = np.expand_dims(test_board, axis=0)
-
-prediction = nn.model.predict(test_board, verbose=False)
-print(prediction[0])
-print(prediction[1])

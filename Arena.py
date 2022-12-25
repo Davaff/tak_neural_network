@@ -1,11 +1,10 @@
-import logging
 
 from tqdm import tqdm
 
-from Tak import Tak
+from Tak import Tak, PlaceAction
 
 
-class Arena():
+class Arena:
     """
     An Arena class where any 2 agents can be pit against each other.
     """
@@ -43,19 +42,32 @@ class Arena():
         it = 0
         while self.game.getGameEnded(board, curPlayer) == 0:
             it += 1
+            print("Turn ", str(it), "Player ", str(curPlayer))
             if verbose:
                 assert self.display
                 print("Turn ", str(it), "Player ", str(curPlayer))
                 self.display(board)
             action = players[curPlayer + 1](self.game.getCanonicalForm(board, curPlayer))
+            # act = Tak().getAction(action)
+            # if type(act) is PlaceAction:
+            #    print(f"Place stone at row={act.field[0]} col={act.field[1]}")
+            # else:
+            #    print(
+            #        f"Move stone from row={act.field[0]} col={act.field[1]} in direction {act.direction} with split {act.split}")
+
 
             valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer), 1)
 
             if valids[action] == 0:
-                log.error(f'Action {action} is not valid!')
-                log.debug(f'valids = {valids}')
+                print(f'Action {action} is not valid!')
+                print(f'valids = {valids}')
                 assert valids[action] > 0
             board, curPlayer = self.game.getNextState(board, curPlayer, action)
+            # Tak.printBoard(board)
+            # for b, p in Tak().getSymmetries(board, [0]*Tak.getActionSize()):
+            # Tak.printBoard(b)
+
+            # print(f"Board: {board}")
         if verbose:
             assert self.display
             print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
