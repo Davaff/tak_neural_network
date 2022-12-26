@@ -42,7 +42,7 @@ class Arena:
         it = 0
         while self.game.getGameEnded(board, curPlayer) == 0:
             it += 1
-            print("Turn ", str(it), "Player ", str(curPlayer))
+            #print("Turn ", str(it), "Player ", str(curPlayer))
             if verbose:
                 assert self.display
                 print("Turn ", str(it), "Player ", str(curPlayer))
@@ -55,7 +55,8 @@ class Arena:
             #    print(
             #        f"Move stone from row={act.field[0]} col={act.field[1]} in direction {act.direction} with split {act.split}")
 
-
+            #print(Tak.stringRepresentation(board))
+            #print(Tak.printBoard(Tak.boardRepresentation(Tak.stringRepresentation(board))))
             valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer), 1)
 
             if valids[action] == 0:

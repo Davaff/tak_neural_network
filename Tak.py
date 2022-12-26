@@ -1,3 +1,4 @@
+import struct
 from enum import Enum
 from math import floor
 
@@ -394,7 +395,8 @@ class Tak:
 
         return boards
 
-    def stringRepresentation(self, board):
+    @staticmethod
+    def stringRepresentation(board):
         """
         Input:
             board: current board
@@ -403,7 +405,41 @@ class Tak:
             boardString: a quick conversion of board to a string format.
                          Required by MCTS for hashing.
         """
-        return board.tostring()
+        board_bytes = bytearray()
+        for row in range(0, len(board)):
+            for column in range(0, len(board[row])):
+                # First checking place actions
+                pile = board[row, column]
+                board_bytes.append("|".encode("ascii")[0])
+                # Not using getPileHeight for efficiency
+                i = 0
+                while True:
+                    if pile[i] == 0:
+                        break
+                    else:
+                        board_bytes.append(int(pile[i]).to_bytes(byteorder="big", length=1, signed=True)[0])
+                    i += 1
+            board_bytes.append("\n".encode("ascii")[0])
+        return bytes(board_bytes)
+
+    @staticmethod
+    def boardRepresentation(bytes_board: bytes) -> np.ndarray:
+        new_board = np.zeros((5, 5, 43), dtype=int)
+        row = -1
+        column = 0
+        ht = 0
+
+        for bt in bytes_board:
+            if bt == "|".encode("ascii")[0]:
+                row += 1
+                ht = 0
+            elif bt == "\n".encode("ascii")[0]:
+                row = -1
+                column += 1
+            else:
+                new_board[row][column][ht] = bt - 256 if bt > 127 else bt
+                ht += 1
+        return new_board
 
     @staticmethod
     def getSplit(move_split):

@@ -16,7 +16,7 @@ class MCTS:
         #print("##### Initialized Monte Carlo Tree Search #####")
         self.game = Tak()
         self.neuralNetwork = net
-        self.numMCTSSims = 50
+        self.numMCTSSims = 30
         self.cpuct = 1.0
 
         self.Qsa = {}  # stores Q values for s,a (as defined in the paper)
@@ -42,7 +42,7 @@ class MCTS:
             self.depth = 0
             self.search(canonicalBoard)
 
-        s = self.game.stringRepresentation(canonicalBoard)
+        s = Tak.stringRepresentation(canonicalBoard)
         counts = [self.Nsa[(s, a)] if (s, a) in self.Nsa else 0 for a in range(self.game.getActionSize())]
 
         if temp == 0:
@@ -78,7 +78,7 @@ class MCTS:
         """
 
         self.depth += 1
-        s = self.game.stringRepresentation(canonicalBoard)
+        s = Tak.stringRepresentation(canonicalBoard)
 
         if s not in self.Es:
             self.Es[s] = self.game.getGameEnded(canonicalBoard, 1)
