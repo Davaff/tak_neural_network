@@ -16,7 +16,7 @@ class MCTS:
         #print("##### Initialized Monte Carlo Tree Search #####")
         self.game = Tak()
         self.neuralNetwork = net
-        self.numMCTSSims = 30
+        self.numMCTSSims = 50
         self.cpuct = 1.0
 
         self.Qsa = {}  # stores Q values for s,a (as defined in the paper)
