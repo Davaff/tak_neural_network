@@ -13,12 +13,13 @@ class Trainer:
     def __init__(self, net):
         self.updateThreshold = 0.55
         self.numItersForTrainExamplesHistory = 20
-        self.selfPlayEpisodes = 250
+        self.selfPlayEpisodes = 50
         self.trainExamplesHistory = []
         self.trainingIterations = 30
         self.neuralNetwork: TakNN = net
         self.competitorNetwork: TakNN = TakNN()  # Competitor
         self.game = Tak()
+        self.arenaCompare = 40
         self.tempThreshold = 15
 
     def train(self):
