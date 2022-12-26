@@ -15,7 +15,7 @@ class Trainer:
 
     def __init__(self, net):
         self.updateThreshold = 0.55
-        self.selfPlayEpisodes = 1
+        self.selfPlayEpisodes = 100
         self.trainExamples = []
         self.neuralNetwork: TakNN = net
         self.competitorNetwork: TakNN = TakNN()  # Competitor
