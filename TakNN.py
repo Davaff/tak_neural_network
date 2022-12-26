@@ -18,7 +18,7 @@ class TakNN:
         self.size = 5
         self.max_height = 43
         self.batchSize = 64
-        self.epochs = 15
+        self.epochs = 50
         self.resNetBlocks = 10
 
         self.input_layer = Input(shape=(self.size, self.size, self.max_height))
@@ -69,7 +69,7 @@ class TakNN:
         target_pis = np.asarray(target_pis)
         target_vs = np.asarray(target_vs)
         self.model.fit(x=input_boards, y=[target_vs, target_pis], batch_size=self.batchSize, epochs=self.epochs,
-                       callbacks=[es, cp])
+                       callbacks=[cp])
 
     def predict(self, board):
         start = time.time()
