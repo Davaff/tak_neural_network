@@ -105,5 +105,6 @@ class Trainer:
         else:
             print("##### File with trainExamples found. Loading it... #####")
             with open(filename, "rb") as f:
+                print(f"File size {os.stat(filename).st_size}")
                 self.trainExamples = Unpickler(f).load()
             print('Loading done!')
