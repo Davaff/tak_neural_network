@@ -1,4 +1,5 @@
 import os
+import sys
 from collections import deque
 from pickle import Pickler, Unpickler
 from random import shuffle
@@ -14,6 +15,7 @@ from TakNN import TakNN
 class Trainer:
 
     def __init__(self, net):
+        sys.setrecursionlimit(10000)
         self.updateThreshold = 0.55
         self.selfPlayEpisodes = 60
         self.trainExamples = []
