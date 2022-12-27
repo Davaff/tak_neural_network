@@ -17,7 +17,7 @@ class Trainer:
     def __init__(self, net):
         sys.setrecursionlimit(10000)
         self.updateThreshold = 0.55
-        self.selfPlayEpisodes = 60
+        self.selfPlayEpisodes = 250
         self.trainExamples = []
         self.neuralNetwork: TakNN = net
         self.competitorNetwork: TakNN = TakNN()  # Competitor
@@ -25,12 +25,13 @@ class Trainer:
         self.arenaCompare = 40
         self.tempThreshold = 15
 
-    def generateExamples(self, name, write_to_file=False):
+    def generateExamples(self, name="", write_to_file=False):
         for _ in tqdm(range(self.selfPlayEpisodes), desc="Self Play"):
-            self.trainExamples += self.executeEpisode()
+            ep = self.executeEpisode()
+            self.trainExamples += ep
+            if write_to_file:
+                self.saveTrainExamples(name, ep)
         print(f"Generated {len(self.trainExamples)} examples for training.")
-        if write_to_file:
-            self.saveTrainExamples(name)
 
     def train(self):
         print(f"##### Starting training #####")
@@ -73,9 +74,7 @@ class Trainer:
             temp = int(episodeStep < self.tempThreshold)
 
             pi = mcts.getActionProb(canonicalBoard, temp=temp)
-            sym = self.game.getSymmetries(canonicalBoard, pi)
-            for b, p in sym:
-                roundExamples.append([Tak.stringRepresentation(b), currPlayer, p, None])
+            roundExamples.append([Tak.stringRepresentation(canonicalBoard), currPlayer, pi, None])
 
             action = np.random.choice(len(pi), p=pi)
             steps += 1
@@ -91,13 +90,20 @@ class Trainer:
                 # Board, pi, v
                 return [(x[0], x[2], r * ((-1) ** (x[1] != currPlayer))) for x in roundExamples]
 
-    def saveTrainExamples(self, name):
+    def deleteExamples(self, name):
+        folder = "./examples/"
+        filename = os.path.join(folder, name)
+        if os.path.exists(filename):
+            os.remove(filename)
+
+    def saveTrainExamples(self, name, example):
         folder = "./examples/"
         if not os.path.exists(folder):
             os.makedirs(folder)
         filename = os.path.join(folder, name)
-        with open(filename, "wb+") as f:
-            Pickler(f).dump(self.trainExamples)
+        with open(filename, "ab+") as f:
+            for ex in example:
+                Pickler(f).dump(ex)
         f.close()
 
     def loadTrainExamples(self, name):
@@ -108,5 +114,12 @@ class Trainer:
             print("##### File with trainExamples found. Loading it... #####")
             with open(filename, "rb") as f:
                 print(f"File size {os.stat(filename).st_size}")
-                self.trainExamples = Unpickler(f).load()
+                examples = 0
+                while True:
+                    try:
+                        self.trainExamples.append(Unpickler(f).load())
+                        examples += 1
+                    except EOFError:
+                        break
+                print(f"Imported {examples} examples")
             print('Loading done!')

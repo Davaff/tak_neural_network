@@ -18,7 +18,7 @@ class TakNN:
         self.size = 5
         self.max_height = 43
         self.batchSize = 64
-        self.epochs = 3
+        self.epochs = 100
         self.resNetBlocks = 10
 
         self.input_layer = Input(shape=(self.size, self.size, self.max_height))
@@ -55,21 +55,31 @@ class TakNN:
         layer2_b = Activation("relu")(BatchNormalization(axis=3)(Conv2D(256, 3, padding="same")(layer2_a)))
         return Activation("relu")(Add()([layer2_b, input_layer]))
     def train(self, examples):
-        es = EarlyStopping(monitor='loss', mode='min', patience=2)
+        es = EarlyStopping(monitor='val_loss', mode='min', patience=2, restore_best_weights=True)
         checkpoint_filepath = './tmp/checkpoint'
         cp = ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
-            monitor='loss',
+            monitor='val_loss',
             mode='min',
             save_best_only=True)
         input_boards, target_pis, target_vs = list(zip(*examples))
         input_boards = [Tak.boardRepresentation(board) for board in input_boards]
-        input_boards = np.asarray(input_boards)
-        target_pis = np.asarray(target_pis)
-        target_vs = np.asarray(target_vs)
-        self.model.fit(x=input_boards, y=[target_vs, target_pis], batch_size=self.batchSize, epochs=self.epochs,
-                       callbacks=[cp, es])
+
+        newBoards, newPis, newVs = [], [], []
+        for i in range(0, len(input_boards)):
+            sym = Tak.getSymmetries(input_boards[i], target_pis[i])
+            for b, p in sym:
+                newBoards.append(b)
+                newPis.append(p)
+                newVs.append(target_vs[i])
+
+        input_boards = np.asarray(newBoards)
+        target_pis = np.asarray(newPis)
+        target_vs = np.asarray(newVs)
+        val_count = len(input_boards) // 4
+        self.model.fit(x=input_boards[val_count:], y=[target_vs[val_count:], target_pis[val_count:]], batch_size=self.batchSize, epochs=self.epochs,
+                       callbacks=[cp, es], validation_data=(input_boards[:val_count], [target_vs[:val_count], target_pis[:val_count]]))
 
     def predict(self, board):
         start = time.time()

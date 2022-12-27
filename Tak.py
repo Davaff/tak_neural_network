@@ -370,7 +370,8 @@ class Tak:
         """
         return player * board  # inverting colors.
 
-    def getSymmetries(self, board, pi):
+    @staticmethod
+    def getSymmetries(board, pi):
         """
         Input:
             board: current board
