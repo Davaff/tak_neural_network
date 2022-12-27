@@ -18,7 +18,7 @@ class TakNN:
         self.size = 5
         self.max_height = 43
         self.batchSize = 64
-        self.epochs = 50
+        self.epochs = 100
         self.resNetBlocks = 10
 
         self.input_layer = Input(shape=(self.size, self.size, self.max_height))
@@ -55,8 +55,8 @@ class TakNN:
         layer2_b = Activation("relu")(BatchNormalization(axis=3)(Conv2D(256, 3, padding="same")(layer2_a)))
         return Activation("relu")(Add()([layer2_b, input_layer]))
     def train(self, examples):
-        es = EarlyStopping(monitor='loss', mode='min')
-        checkpoint_filepath = '/tmp/checkpoint'
+        es = EarlyStopping(monitor='loss', mode='min', patience=2)
+        checkpoint_filepath = './tmp/checkpoint'
         cp = ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
@@ -69,7 +69,7 @@ class TakNN:
         target_pis = np.asarray(target_pis)
         target_vs = np.asarray(target_vs)
         self.model.fit(x=input_boards, y=[target_vs, target_pis], batch_size=self.batchSize, epochs=self.epochs,
-                       callbacks=[cp])
+                       callbacks=[cp, es])
 
     def predict(self, board):
         start = time.time()
