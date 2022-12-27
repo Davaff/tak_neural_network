@@ -18,7 +18,7 @@ class TakNN:
         self.size = 5
         self.max_height = 43
         self.batchSize = 64
-        self.epochs = 100
+        self.epochs = 3
         self.resNetBlocks = 10
 
         self.input_layer = Input(shape=(self.size, self.size, self.max_height))
