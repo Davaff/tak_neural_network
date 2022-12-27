@@ -22,7 +22,7 @@ class Trainer:
         self.neuralNetwork: TakNN = net
         self.competitorNetwork: TakNN = TakNN()  # Competitor
         self.game = Tak()
-        self.arenaCompare = 40
+        self.arenaCompare = 20
         self.tempThreshold = 15
 
     def generateExamples(self, name="", write_to_file=False):
