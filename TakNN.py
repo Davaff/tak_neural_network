@@ -19,7 +19,7 @@ class TakNN:
         self.max_height = 43
         self.batchSize = 64
         self.epochs = 100
-        self.resNetBlocks = 10
+        self.resNetBlocks = 2
 
         self.input_layer = Input(shape=(self.size, self.size, self.max_height))
         # layer 1: convolution to 256 channels.
@@ -49,13 +49,13 @@ class TakNN:
         self.pi = Dense(Tak.getActionSize(), activation="softmax", name="pi")(policy_flat)
 
         self.model = Model(inputs=self.input_layer, outputs=[self.v, self.pi])
-        self.model.compile(loss=["categorical_crossentropy", "mean_squared_error"], optimizer=Adam(0.001))
+        self.model.compile(loss=["mean_squared_error", "categorical_crossentropy"], optimizer=Adam(0.001))
     def resNetBlock(self, input_layer):
         layer2_a = Activation("relu")(BatchNormalization(axis=3)(Conv2D(256, 3, padding="same")(input_layer)))
         layer2_b = Activation("relu")(BatchNormalization(axis=3)(Conv2D(256, 3, padding="same")(layer2_a)))
         return Activation("relu")(Add()([layer2_b, input_layer]))
     def train(self, examples):
-        es = EarlyStopping(monitor='val_loss', mode='min', patience=2, restore_best_weights=True)
+        es = EarlyStopping(monitor='val_loss', mode='min', patience=5, restore_best_weights=True)
         checkpoint_filepath = './tmp/checkpoint'
         cp = ModelCheckpoint(
             filepath=checkpoint_filepath,
