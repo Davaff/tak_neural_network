@@ -3,6 +3,7 @@ import math
 import numpy as np
 
 from Tak import Tak
+from Utility import TakState
 
 EPS = 1e-8
 
@@ -13,14 +14,13 @@ class MCTS:
     """
 
     def __init__(self, net):
-        #print("##### Initialized Monte Carlo Tree Search #####")
         self.game = Tak()
         self.neuralNetwork = net
         self.numMCTSSims = 50
         self.cpuct = 1.0
 
         self.Qsa = {}  # stores Q values for s,a (as defined in the paper)
-        self.Nsa = {}  # stores #times edge s,a was visited
+        self.Nsa = {}  # stores #times edge s,a visited
         self.Ns = {}  # stores #times board s was visited
         self.Ps = {}  # stores initial policy (returned by neural net)
 
@@ -29,7 +29,7 @@ class MCTS:
 
         self.depth = 0
 
-    def getActionProb(self, canonicalBoard, temp=1):
+    def getActionProb(self, state: TakState, temp=1):
         """
         This function performs numMCTSSims simulations of MCTS starting from
         canonicalBoard.
@@ -40,9 +40,9 @@ class MCTS:
         """
         for i in range(self.numMCTSSims):
             self.depth = 0
-            self.search(canonicalBoard)
+            self.search(state)
 
-        s = Tak.stringRepresentation(canonicalBoard)
+        s = Tak.stringRepresentation(state.board)
         counts = [self.Nsa[(s, a)] if (s, a) in self.Nsa else 0 for a in range(self.game.getActionSize())]
 
         if temp == 0:
@@ -57,7 +57,7 @@ class MCTS:
         probs = [x / counts_sum for x in counts]
         return probs
 
-    def search(self, canonicalBoard):
+    def search(self, state: TakState):
         """
         This function performs one iteration of MCTS. It is recursively called
         till a leaf node is found. The action chosen at each node is one that
@@ -78,24 +78,18 @@ class MCTS:
         """
 
         self.depth += 1
-        s = Tak.stringRepresentation(canonicalBoard)
+        s = Tak.stringRepresentation(state.board)
 
         if s not in self.Es:
-            self.Es[s] = self.game.getGameEnded(canonicalBoard, 1)
+            self.Es[s] = self.game.getGameEnded(state)
         if self.Es[s] != 0:
             # terminal node
             return -self.Es[s]
-        if self.depth > 1000:
-            self.Es[s] = EPS
-            return -self.Es[s]
-
-        #print(self.depth)
 
         if s not in self.Ps:
             # leaf node
-            self.Ps[s], v = self.neuralNetwork.predict(canonicalBoard)
-            #print(f"Nefwork predited {self.Ps[s]} on board {canonicalBoard}")
-            valids = self.game.getValidMoves(canonicalBoard, 1)
+            self.Ps[s], v = self.neuralNetwork.predict(state.board)
+            valids = self.game.getValidMoves(state)
             self.Ps[s] = self.Ps[s] * valids  # masking invalid moves
             sum_Ps_s = np.sum(self.Ps[s])
             if sum_Ps_s > 0:
@@ -110,7 +104,6 @@ class MCTS:
                 self.Ps[s] = self.Ps[s] + valids
 
                 self.Ps[s] /= np.sum(self.Ps[s])
-            #print(self.Ps[s], valids)
 
             self.Vs[s] = valids
             self.Ns[s] = 0
@@ -134,8 +127,8 @@ class MCTS:
                     best_act = a
 
         a = best_act
-        next_s, next_player = self.game.getNextState(canonicalBoard, 1, a)
-        next_s = self.game.getCanonicalForm(next_s, next_player)
+        next_s = self.game.getNextState(state, a)
+        next_s = self.game.getCanonicalForm(next_s)
 
         v = self.search(next_s)
 

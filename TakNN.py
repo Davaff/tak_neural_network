@@ -7,6 +7,7 @@ from keras.layers import Activation, BatchNormalization, Conv2D, Add, Flatten, D
 from keras.optimizers import Adam
 
 from Tak import Tak
+from Utility import actions_per_field
 
 
 # The class for the neural network.
@@ -18,8 +19,8 @@ class TakNN:
         self.size = 5
         self.max_height = 43
         self.batchSize = 64
-        self.epochs = 100
-        self.resNetBlocks = 2
+        self.epochs = 2
+        self.resNetBlocks = 3
 
         self.input_layer = Input(shape=(self.size, self.size, self.max_height))
         # layer 1: convolution to 256 channels.
@@ -31,11 +32,11 @@ class TakNN:
         for i in range(0, self.resNetBlocks-1):
             old_in = self.resNetBlock(old_in)
 
-        # Last res net block with some dropout to avoid overfiitting
+        # Last res net block with some dropout to avoid overfitting
         layer4_a = Activation("relu")(BatchNormalization(axis=3)(Conv2D(256, 3, padding="same")(old_in)))
         layer4_b = Activation("relu")(BatchNormalization(axis=3)(Conv2D(256, 3, padding="same")(layer4_a)))
         layer4 = Dropout(0.3)(Activation("relu")(Add()([layer4_b, old_in])))
-        # over fitting.
+
 
         head_split = Activation("relu")(BatchNormalization(axis=3)(Conv2D(1, 1, padding="same")(layer4)))
         head_flat = Flatten()(head_split)
@@ -44,7 +45,7 @@ class TakNN:
 
         policy_split = Activation("relu")(BatchNormalization(axis=3)(Conv2D(256, 1, padding="same")(layer4)))
         policy_2 = Activation("relu")(
-            BatchNormalization(axis=3)(Conv2D(Tak().actions_per_field, 1, padding="same", use_bias=True)(policy_split)))
+            BatchNormalization(axis=3)(Conv2D(actions_per_field, 1, padding="same", use_bias=True)(policy_split)))
         policy_flat = Flatten()(policy_2)
         self.pi = Dense(Tak.getActionSize(), activation="softmax", name="pi")(policy_flat)
 
@@ -77,9 +78,11 @@ class TakNN:
         input_boards = np.asarray(newBoards)
         target_pis = np.asarray(newPis)
         target_vs = np.asarray(newVs)
-        val_count = len(input_boards) // 4
+        val_count = 0 #len(input_boards) // 4
         self.model.fit(x=input_boards[val_count:], y=[target_vs[val_count:], target_pis[val_count:]], batch_size=self.batchSize, epochs=self.epochs,
-                       callbacks=[cp, es], validation_data=(input_boards[:val_count], [target_vs[:val_count], target_pis[:val_count]]))
+                       callbacks=[cp])
+
+        #  validation_data = (input_boards[:val_count], [target_vs[:val_count], target_pis[:val_count]])
 
     def predict(self, board):
         start = time.time()

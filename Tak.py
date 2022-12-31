@@ -1,175 +1,72 @@
-import struct
-from enum import Enum
-from math import floor
+import queue
 
 import numpy as np
 
-splits_dict = {
-    0: [1],
-    1: [2],
-    2: [1, 1],
-    3: [3],
-    4: [2, 1],
-    5: [1, 2],
-    6: [1, 1, 1],
-    7: [4],
-    8: [3, 1],
-    9: [2, 2],
-    10: [2, 1, 1],
-    11: [1, 3],
-    12: [1, 2, 1],
-    13: [1, 1, 2],
-    14: [1, 1, 1, 1],
-    15: [5],
-    16: [4, 1],
-    17: [3, 2],
-    18: [3, 1, 1],
-    19: [2, 3],
-    20: [2, 2, 1],
-    21: [2, 1, 2],
-    22: [2, 1, 1, 1],
-    23: [1, 4],
-    24: [1, 3, 1],
-    25: [1, 2, 2],
-    26: [1, 2, 1, 1],
-    27: [1, 1, 3],
-    28: [1, 1, 2, 1],
-    29: [1, 1, 1, 2]
-}
-
-inv_splits_dict = {tuple(v): k for k, v in splits_dict.items()}
+from Utility import *
 
 
-class Stone(Enum):  # positive values for white, negative for black
-    EMPTY = 0
-    FLAT = 1
-    WALL = 2
-    CAPSTONE = 3
-
-
-class Direction(Enum):
-    NORTH = 0
-    EAST = 1
-    SOUTH = 2
-    WEST = 3
-
-
-class PlaceAction:
-    def __init__(self, field: list, stone: Stone):
-        self.field: list = field
-        self.stone: Stone = stone
-
-    def getActionInt(self):
-        real_action = self.stone.value - 1
-        idx = (self.field[0], self.field[1], real_action)
-        return np.ravel_multi_index(idx, (5, 5, 123))
-
-
-class MoveAction:
-    def __init__(self, field, direction: Direction, split):
-        self.field: list = field  # x, y
-        self.direction: Direction = direction
-        self.stone_number = sum(split)
-        self.split: list = split  # How to leave down the stones.
-
-    def getActionInt(self):
-        real_action = ((inv_splits_dict[tuple(self.split)] + self.direction.value * 30) + 3)
-        idx = (self.field[0], self.field[1], real_action)
-        return np.ravel_multi_index(idx, (5, 5, 123))
-
-
-# For now we test only with 5x5 board.
+# For now, we test only with 5x5 board.
 class Tak:
-    """
-        Use 1 for player1 and -1 for player2.
 
-        See othello/OthelloGame.py for an example implementation.
-        """
-
-    possible_splits = 30
-    actions_per_field = possible_splits * 4 + 3
-
-    # Actions
-    # 0, 1, 2 = Place FLAT, WALL, CAPSTONE
-    # For the others make real_action - 3
-    # Then: real_action / 4 gives direction
-    # real_action % 30 gives move in the direction with 30 possibilities 0-30:
-    # 0 -> 1 stone moved
-    # 1-2 -> 2 stones moved, 1 = both on first field 2 = divided
-    # 3-6 -> 3 stones moved
-    # 7-14 -> 4 stones moved
-    # 30 - -> 5 stones moved
-    def getAction(self, action):
-        # action index in 5*5*123 array
-        assert action < self.getActionSize()
+    @staticmethod
+    def getAction(action):
+        assert action < Tak.getActionSize()
         action = np.unravel_index(action, (5, 5, 123))
+
         row = action[0]
         column = action[1]
         real_action = action[2]
         if real_action < 3:
-            return PlaceAction([row, column], real_action + 1)
+            return PlaceAction([row, column], Stone(real_action + 1))
 
         real_action -= 3
-        direction: Direction = Direction(real_action // self.possible_splits)
-        move_split = real_action % self.possible_splits
+        direction: Direction = Direction(real_action // possible_splits)
+        move_split = real_action % possible_splits
 
         return MoveAction([row, column], direction, Tak.getSplit(move_split))
 
-    def __init__(self):
-
-        pass
-
-    def getInitBoard(self):
-        """
-        Returns:
-            startBoard: a representation of the board (ideally this is the form
-                        that will be the input to your neural network)
-        """
-
-        return np.zeros((5, 5, 43), dtype=int)  # 43 height 21 black, 21 white max 1 capstone on top.
-
-    def getBoardSize(self):
-        """
-        Returns:
-            (x,y): a tuple of board dimensions
-        """
-        return 5, 5
-
-    # Action space is 5*5*151
+    @staticmethod
+    def getInitState() -> TakState:
+        return TakState(np.zeros((5, 5, 43), dtype=int), 21, 21, 1, 1, 0, 1)
 
     @staticmethod
-    def getActionSize():
-        """
-        Returns:
-            actionSize: number of all possible actions
-        """
+    def getBoardSize() -> (int, int):
+        return 5, 5
+
+    @staticmethod
+    def getActionSize() -> int:
         return (5 * 5) * ((1 + 2 + 4 + 8 + 15) * 4 + 3)  # 3 place actions, other are moving actions in 4 directions.
 
-    def getNextState(self, board, player, action):
-        """
-        Input:
-            board: current board
-            player: current player (1 or -1)
-            action: action taken by current player
+    @staticmethod
+    def getNextState(curr_state: TakState, action: int) -> TakState:
 
-        Returns:
-            nextBoard: board after applying action
-            nextPlayer: player who plays in the next turn (should be -player)
-        """
-        #assert self.getValidMoves(board, player)[action] != 0
-        #Tak.printBoard(board)
-        #act = Tak().getAction(action)
-        #if type(act) is PlaceAction:
-           # print(f"Place stone at row={act.field[0]} col={act.field[1]}")
-        #else:
-        #    print(
-        #        f"Move stone from row={act.field[0]} col={act.field[1]} in direction {act.direction} with split {act.split}")
-        board = np.copy(board)
-        action = self.getAction(action)
+        new_state = TakState(np.copy(curr_state.board), curr_state.stones_white, curr_state.stones_black,
+                             curr_state.capstones_white, curr_state.capstones_black, curr_state.moves_no_place,
+                             curr_state.curr_player)
+
+        player = curr_state.curr_player
+        orig_player = player
+        action = Tak.getAction(action)
+        if curr_state.stones_white == 21 or curr_state.stones_black == 21:
+            player = -player  # first move
+
         if type(action) is PlaceAction:
-            board[action.field[0]][action.field[1]][0] = player * action.stone
+            new_state.board[action.field[0]][action.field[1]][0] = player * action.stone.value
+            new_state.moves_no_place = 0
+            if player == 1:  # white
+                if action.stone == Stone.CAPSTONE:
+                    new_state.capstones_white -= 1
+                else:
+                    new_state.stones_white -= 1
+            elif player == -1:  # black
+                if action.stone == Stone.CAPSTONE:
+                    new_state.capstones_black -= 1
+                else:
+                    new_state.stones_black -= 1
+
         if type(action) is MoveAction:
-            pile = board[action.field[0]][action.field[1]]
+            new_state.moves_no_place += 1
+            pile = new_state.board[action.field[0]][action.field[1]]
             moved_stack = pile[Tak.getPileHeight(pile) - action.stone_number:Tak.getPileHeight(pile)]
             # removing stones from start stack by setting to 0
             movement = 0
@@ -180,32 +77,32 @@ class Tak:
                 movement += 1
                 nextPile = None
                 if action.direction == Direction.NORTH:
-                    nextPile = board[action.field[0] - movement][action.field[1]]
+                    nextPile = new_state.board[action.field[0] - movement][action.field[1]]
 
                 elif action.direction == Direction.EAST:
-                    nextPile = board[action.field[0]][action.field[1] + movement]
+                    nextPile = new_state.board[action.field[0]][action.field[1] + movement]
 
                 elif action.direction == Direction.SOUTH:
-                    nextPile = board[action.field[0] + movement][action.field[1]]
+                    nextPile = new_state.board[action.field[0] + movement][action.field[1]]
 
                 elif action.direction == Direction.WEST:
-                    nextPile = board[action.field[0]][action.field[1] - movement]
+                    nextPile = new_state.board[action.field[0]][action.field[1] - movement]
 
                 if movement == len(action.split) and amount == 1 and \
                         moved_stack[-1] == player * Stone.CAPSTONE.value and \
                         (nextPile[Tak.getPileHeight(nextPile)] == Stone.WALL.value or
                          nextPile[Tak.getPileHeight(nextPile)] == -Stone.WALL.value):
-                    nextPile[Tak.getPileHeight(nextPile)] = nextPile[Tak.getPileHeight(
-                        nextPile)] / Stone.WALL.value  # results in 1 or -1
+                    nextPile[Tak.getPileHeight(nextPile)] = nextPile[Tak.getPileHeight(nextPile)] / Stone.WALL.value
 
                 # Now we move the stones
                 nextPile[Tak.getPileHeight(nextPile):Tak.getPileHeight(nextPile) + amount] = moved_stack[start:stones]
             pile[Tak.getPileHeight(pile) - action.stone_number:Tak.getPileHeight(pile)] = 0
 
-        #Tak.printBoard(board)
-        return board, -1 * player
+        new_state.curr_player = orig_player * -1
+        return new_state
 
-    def getMaxDisplacementInDirection(self, field: list, direction: Direction, board, player) -> int:
+    @staticmethod
+    def getMaxDisplacementInDirection(field: list, direction: Direction, board: np.ndarray) -> int:
         max_displacement = 0
         board_size = 5
         while True:
@@ -232,77 +129,80 @@ class Tak:
                 next_stone = abs(next_pile[Tak.getPileHeight(next_pile) - 1])
 
             max_displacement += 1
-            if next_stone is None or next_stone == Stone.CAPSTONE or next_stone == Stone.WALL:
+            if next_stone is None or next_stone == Stone.CAPSTONE.value or next_stone == Stone.WALL.value:
                 break
 
         return max_displacement - 1
 
-    def getMaxDisplacementInDirectionUsingCapstone(self, field: list, direction: Direction, board, player) -> int:
+    @staticmethod
+    def getMaxDisplacementInDirectionUsingCapstone(field: list, direction: Direction, board: np.ndarray) -> int:
         max_displacement = 0
         board_size = 5
         while True:
             movement = max_displacement + 1
             next_stone = None
+            next_pile = None
             if direction == Direction.NORTH:
                 if field[0] - movement >= 0:
-                    next_stone = abs(board[field[0] - movement][field[1]])
+                    next_pile = board[field[0] - movement][field[1]]
 
             elif direction == Direction.EAST:
                 if field[1] + movement < board_size:
-                    next_stone = abs(board[field[0]][field[1] + movement])
+                    next_pile = board[field[0]][field[1] + movement]
 
             elif direction == Direction.SOUTH:
                 if field[0] + movement < board_size:
-                    next_stone = abs(board[field[0] + movement][field[1]])
+                    next_pile = board[field[0] + movement][field[1]]
 
             elif direction == Direction.WEST:
                 if field[1] - movement >= 0:
-                    next_stone = abs(board[field[0]][field[1] - movement])
+                    next_pile = board[field[0]][field[1] - movement]
 
-            if next_stone is None or next_stone == Stone.CAPSTONE:
+            if next_pile is not None:
+                next_stone = abs(next_pile[Tak.getPileHeight(next_pile) - 1])
+
+            if next_stone is None or next_stone == Stone.CAPSTONE.value:
                 break
-            if next_stone == Stone.WALL:
+            if next_stone == Stone.WALL.value:
                 return max_displacement + 1  # because then we flatten the wall.
             max_displacement += 1
 
         return max_displacement
 
-    def getValidMoves(self, board, player):
-        """
-        Input:
-            board: current board
-            player: current player
-
-        Returns:
-            validMoves: a binary vector of length self.getActionSize(), 1 for
-                        moves that are valid from the current board and player,
-                        0 for invalid moves
-        """
+    @staticmethod
+    def getValidMoves(state: TakState):
         moves = [0] * Tak.getActionSize()
 
         board_size = 5
 
-        for row in range(0, len(board)):
-            for column in range(0, len(board[row])):
+        can_place_stone = state.canPlaceStone()
+        can_place_capstone = state.canPlacCapstone()
+        for row in range(0, len(state.board)):
+            for column in range(0, len(state.board[row])):
                 # First checking place actions
-                pile = board[row, column]
-                if Tak.getPileHeight(board[row, column]) == 0:
-                    # moves[PlaceAction([row, column], Stone.WALL).getActionInt()] = 1
-                    # moves[PlaceAction([row, column], Stone.CAPSTONE).getActionInt()] = 1
-                    moves[PlaceAction([row, column], Stone.FLAT).getActionInt()] = 1
-
+                pile = state.board[row, column]
+                pile_height = Tak.getPileHeight(pile)
+                if pile_height == 0:
+                    if can_place_stone:
+                        moves[PlaceAction([row, column], Stone.FLAT).getActionInt()] = 1
+                        if state.stones_white == 21 or state.stones_black == 21:
+                            continue  # First move, only flat playing allowed.
+                        moves[PlaceAction([row, column], Stone.WALL).getActionInt()] = 1
+                    if can_place_capstone:
+                        moves[PlaceAction([row, column], Stone.CAPSTONE).getActionInt()] = 1
                 # Now checking if we can move the pile.
-                elif player * pile[Tak.getPileHeight(pile) - 1] > 0:  # pile owned
-                    max_stones = min(board_size, Tak.getPileHeight(pile))
+                elif state.curr_player * pile[pile_height - 1] > 0:  # pile owned
+                    max_stones = min(board_size, pile_height)
                     for direction in Direction:
-                        if player * pile[Tak.getPileHeight(pile) - 1] == Stone.CAPSTONE.value:
-                            max_displacement = self.getMaxDisplacementInDirectionUsingCapstone([row, column], direction,
-                                                                                               board, player)
+                        if state.curr_player * pile[pile_height - 1] == Stone.CAPSTONE.value:
+                            max_displacement = Tak.getMaxDisplacementInDirectionUsingCapstone([row, column], direction,
+                                                                                              state.board)
+
                             for split in splits_dict.values():
                                 if len(split) == max_displacement and sum(split) <= max_stones and split[-1] == 1:
                                     moves[MoveAction([row, column], direction, split).getActionInt()] = 1
 
-                        max_displacement = self.getMaxDisplacementInDirection([row, column], direction, board, player)
+                        max_displacement = Tak.getMaxDisplacementInDirection([row, column], direction, state.board)
 
                         for split in splits_dict.values():
                             if len(split) <= max_displacement and sum(split) <= max_stones:
@@ -320,55 +220,119 @@ class Tak:
 
     @staticmethod
     def printBoard(board):
+        max_height = 0
         for row in range(0, len(board)):
             for column in range(0, len(board[row])):
-                # First checking place actions
+                height = Tak.getPileHeight(board[row, column])
+                if height > max_height:
+                    max_height = height
+
+        for row in range(0, len(board)):
+            for column in range(0, len(board[row])):
                 pile = board[row, column]
-                print("| ", end="")
-                for i in range(0, Tak.getPileHeight(pile)):
-                    print(f"{pile[i]}", end="")
+                height = Tak.getPileHeight(pile)
                 print("|", end="")
-            print("")
+                for i in range(0, height):
+                    stone = board_glyphs_dict[abs(pile[i])]
+                    player = "W" if pile[i] > 0 else "B"
+                    print(f"({stone}{player})", end="")
+                for i in range(height, max_height):
+                    print(f"    ", end="")
+            print("|")
         print("")
 
-    def getGameEnded(self, board, player):
+    @staticmethod
+    def getGameEnded(state: TakState):
         """
-        Input:
-            board: current board
-            player: current player (1 or -1)
-
         Returns:
             r: 0 if game has not ended. 1 if player won, -1 if player lost,
                small non-zero value for draw.
-
         """
+        visited = np.zeros((5, 5), dtype=int)
 
-        for row in range(0, len(board)):
-            for column in range(0, len(board[row])):
-                # First checking place actions
-                pile = board[row, column]
-                if Tak.getPileHeight(pile) == 3:
-                    if player * pile[Tak.getPileHeight(pile) - 1] > 0:
-                        return 1
-                    else:
-                        return -1
+        for row in range(0, len(state.board)):
+            for column in range(0, len(state.board[row])):
+                owner, touched_dirs = Tak.checkPath(row, column, visited, state.board)
+                if (Direction.NORTH in touched_dirs and Direction.SOUTH in touched_dirs) or \
+                        (Direction.WEST in touched_dirs and Direction.EAST in touched_dirs):
+                    return state.curr_player * owner
+
+        if state.moves_no_place > 5 * 5 * 20:
+            return 0.001
         return 0
 
-    def getCanonicalForm(self, board, player):
-        """
-        Input:
-            board: current board
-            player: current player (1 or -1)
+    @staticmethod
+    def checkPath(row: int, column: int, visited: np.ndarray, board: np.ndarray) -> (int, list):
+        touched_dirs = []
 
-        Returns:
-            canonicalBoard: returns canonical form of board. The canonical form
-                            should be independent of player. For e.g. in chess,
-                            the canonical form can be chosen to be from the pov
-                            of white. When the player is white, we can return
-                            board as is. When the player is black, we can invert
-                            the colors and return the board.
-        """
-        return player * board  # inverting colors.
+        pile = board[row, column]
+        pile_height = Tak.getPileHeight(pile)
+        if pile_height == 0:
+            return 1, touched_dirs
+        owner = 1 if pile[pile_height - 1] > 0 else -1
+
+        positions = queue.Queue()
+        positions.put([row, column])
+        while not positions.empty():
+            new_pos = positions.get_nowait()
+            if visited[new_pos[0]][new_pos[1]] == 1:
+                continue
+
+            pile = board[new_pos[0], new_pos[1]]
+            pile_height = Tak.getPileHeight(pile)
+
+            if pile_height == 0:
+                continue
+            new_owner = 1 if pile[pile_height - 1] > 0 else -1
+
+            if abs(pile[pile_height - 1]) == Stone.WALL.value or new_owner != owner:
+                continue
+
+            visited[new_pos[0]][new_pos[1]] = 1
+
+            # Pile makes road and is owned by starting owner
+            if new_pos[0] == 0:  # Cannot go up
+                touched_dirs.append(Direction.NORTH)
+            else:
+                positions.put([new_pos[0] - 1, new_pos[1]])
+
+            if new_pos[0] == board_size - 1:  # Cannot go down
+                touched_dirs.append(Direction.SOUTH)
+            else:
+                positions.put([new_pos[0] + 1, new_pos[1]])
+
+            if new_pos[1] == 0:  # Cannot go left
+                touched_dirs.append(Direction.WEST)
+            else:
+                positions.put([new_pos[0], new_pos[1] - 1])
+
+            if new_pos[1] == board_size - 1:  # Cannot go left
+                touched_dirs.append(Direction.EAST)
+            else:
+                positions.put([new_pos[0], new_pos[1] + 1])
+
+        return owner, touched_dirs
+
+    @staticmethod
+    def getCanonicalForm(state: TakState) -> TakState:
+        new_state = TakState(np.copy(state.board), state.stones_white, state.stones_black,
+                             state.capstones_white, state.capstones_black, state.moves_no_place,
+                             state.curr_player)
+        # We invert the players
+        if state.curr_player == 1:
+            return new_state
+        else:
+            new_state.board *= -1
+            new_state.curr_player = 1
+            # Switching stones.
+            tmp_white_stones = new_state.stones_white
+            tmp_white_cap = new_state.capstones_white
+            new_state.stones_white = new_state.stones_black
+            new_state.capstones_white = new_state.capstones_black
+            new_state.stones_black = tmp_white_stones
+            new_state.capstones_black = tmp_white_cap
+
+        return new_state
 
     @staticmethod
     def getSymmetries(board, pi):
@@ -397,7 +361,7 @@ class Tak:
         return boards
 
     @staticmethod
-    def stringRepresentation(board):
+    def stringRepresentation(board: np.ndarray):
         """
         Input:
             board: current board
@@ -426,22 +390,74 @@ class Tak:
     @staticmethod
     def boardRepresentation(bytes_board: bytes) -> np.ndarray:
         new_board = np.zeros((5, 5, 43), dtype=int)
-        row = -1
-        column = 0
+        column = -1
+        row = 0
         ht = 0
 
         for bt in bytes_board:
             if bt == "|".encode("ascii")[0]:
-                row += 1
+                column += 1
                 ht = 0
             elif bt == "\n".encode("ascii")[0]:
-                row = -1
-                column += 1
+                column = -1
+                row += 1
             else:
                 new_board[row][column][ht] = bt - 256 if bt > 127 else bt
                 ht += 1
         return new_board
 
     @staticmethod
-    def getSplit(move_split):
+    def getSplit(move_split: int):
         return splits_dict[move_split]
+
+    @staticmethod
+    def parseTakticianResponse(resp: str):
+        assert len(resp) >= 2
+        i = 0
+        stone = None
+        stack = 0
+        if resp[i] == "F":
+            stone = Stone.FLAT
+            i += 1
+        elif resp[i] == "S":
+            stone = Stone.WALL
+            i += 1
+        elif resp[i] == "C":
+            stone = Stone.CAPSTONE
+            i += 1
+        elif "1" <= resp[i] <= "8":
+            stack = int(resp[i])
+            i += 1
+        else:
+            stone = Stone.FLAT
+
+        x = ord(resp[i]) - ord("a")
+        i += 1
+        y = ord(resp[i]) - ord("1")
+        y = board_size - y - 1
+        i += 1
+
+        if i == len(resp):
+            return PlaceAction([y, x], stone)
+
+        direct = None
+        if resp[i] == "+":
+            direct = Direction.NORTH
+        elif resp[i] == "-":
+            direct = Direction.SOUTH
+        elif resp[i] == ">":
+            direct = Direction.EAST
+        elif resp[i] == "<":
+            direct = Direction.WEST
+        if stack == 0:
+            stack = 1
+
+        i += 1
+        slides = []
+        while i < len(resp):
+            slides.append(int(resp[i]))
+            i += 1
+        if len(slides) == 0:
+            slides.append(stack)
+
+        return MoveAction([y, x], direct, slides)
