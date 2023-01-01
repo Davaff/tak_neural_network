@@ -13,8 +13,9 @@ print(tensorflow.test.gpu_device_name())
 sys.setrecursionlimit(10000)
 
 nn = TakNN()
-#nn.loadWeights(f"new_curr_weights3")
+#nn.loadWeights(f"new_curr_weights7")
 c = Trainer(nn)
+#c.generateExamples(write_to_file=False, self_play=False)
 while True:
     c.generateExamples(write_to_file=False, self_play=False)
     c.train()

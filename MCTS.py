@@ -16,7 +16,7 @@ class MCTS:
     def __init__(self, net):
         self.game = Tak()
         self.neuralNetwork = net
-        self.numMCTSSims = 50
+        self.numMCTSSims = 2
         self.cpuct = 1.0
 
         self.Qsa = {}  # stores Q values for s,a (as defined in the paper)

@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package tak.proto;
+option go_package="github.com/nelhage/taktician/pb";
+
+service Taktician {
+    rpc Analyze(AnalyzeRequest) returns (AnalyzeResponse) {}
+    rpc Canonicalize(CanonicalizeRequest) returns (CanonicalizeResponse) {}
+    rpc IsPositionInTak(IsPositionInTakRequest) returns (IsPositionInTakResponse) {}
+}
+
+message AnalyzeRequest {
+    string position = 1;
+    int32 depth = 2;
+    bool precise = 3;
+}
+
+message AnalyzeResponse {
+    repeated string pv = 1;
+    int64 value = 2;
+    int32 depth = 3;
+}
+
+message CanonicalizeRequest {
+    int32 size = 1;
+    repeated string moves = 2;
+}
+
+message CanonicalizeResponse {
+    repeated string moves = 1;
+}
+
+message IsPositionInTakRequest {
+    string position = 1;
+}
+
+message IsPositionInTakResponse {
+    bool inTak = 1;
+    string takMove = 2;
+}

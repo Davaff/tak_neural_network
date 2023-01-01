@@ -10,7 +10,7 @@ print(g.getActionSize())
 
 n1 = TakNN()
 n2 = TakNN()
-n2.loadWeights("rejected_weights")
+n2.loadWeights("new_curr_weights7")
 
 mcts1 = MCTS(n1)
 mcts2 = MCTS(n2)

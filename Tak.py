@@ -191,7 +191,7 @@ class Tak:
                     if can_place_capstone:
                         moves[PlaceAction([row, column], Stone.CAPSTONE).getActionInt()] = 1
                 # Now checking if we can move the pile.
-                elif state.curr_player * pile[pile_height - 1] > 0:  # pile owned
+                elif state.curr_player * pile[pile_height - 1] > 0 and not (state.stones_white == 21 or state.stones_black == 21):  # pile owned
                     max_stones = min(board_size, pile_height)
                     for direction in Direction:
                         if state.curr_player * pile[pile_height - 1] == Stone.CAPSTONE.value:

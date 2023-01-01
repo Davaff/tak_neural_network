@@ -18,9 +18,9 @@ class TakNN:
 
         self.size = 5
         self.max_height = 43
-        self.batchSize = 64
+        self.batchSize = 32
         self.epochs = 2
-        self.resNetBlocks = 3
+        self.resNetBlocks = 15
 
         self.input_layer = Input(shape=(self.size, self.size, self.max_height))
         # layer 1: convolution to 256 channels.

@@ -38,16 +38,16 @@ class Arena:
         """
         players = [self.player2, None, self.player1]
         curPlayer = 1
-        board = self.game.getInitBoard()
+        board = self.game.getInitState()
         it = 0
-        while self.game.getGameEnded(board, curPlayer) == 0:
+        while self.game.getGameEnded(board) == 0:
             it += 1
             #print("Turn ", str(it), "Player ", str(curPlayer))
             if verbose:
                 assert self.display
                 print("Turn ", str(it), "Player ", str(curPlayer))
                 self.display(board)
-            action = players[curPlayer + 1](self.game.getCanonicalForm(board, curPlayer))
+            action = players[curPlayer + 1](self.game.getCanonicalForm(board))
             act = Tak().getAction(action)
             if type(act) is PlaceAction:
                 print(f"Place stone at row={act.field[0]} col={act.field[1]}")
@@ -57,23 +57,23 @@ class Arena:
 
             #print(Tak.stringRepresentation(board))
             #print(Tak.printBoard(Tak.boardRepresentation(Tak.stringRepresentation(board))))
-            valids = self.game.getValidMoves(self.game.getCanonicalForm(board, curPlayer), 1)
+            valids = self.game.getValidMoves(self.game.getCanonicalForm(board))
 
             if valids[action] == 0:
                 print(f'Action {action} is not valid!')
                 print(f'valids = {valids}')
                 assert valids[action] > 0
-            board, curPlayer = self.game.getNextState(board, curPlayer, action)
+            board = self.game.getNextState(board, action)
             # Tak.printBoard(board)
             # for b, p in Tak().getSymmetries(board, [0]*Tak.getActionSize()):
-            Tak.printBoard(board)
+            Tak.printBoard(board.board)
 
             #print(f"Board: {board}")
         if verbose:
             assert self.display
-            print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
+            print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board)))
             self.display(board)
-        return curPlayer * self.game.getGameEnded(board, curPlayer)
+        return curPlayer * self.game.getGameEnded(board)
 
     def playGames(self, num, verbose=False):
         """
